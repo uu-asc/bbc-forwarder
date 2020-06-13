@@ -1,0 +1,16 @@
+name: bbc-forwarder
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python >= 3.8
+  - jupyter
+  - jupyterlab
+  - ipykernel
+  - pandas
+  - openpyxl
+  - pip
+  - pip:
+    - O365
+    - pdfminer.six
+    - flatbread

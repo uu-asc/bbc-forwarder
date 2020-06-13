@@ -1,0 +1,50 @@
+{
+    "mailbox": {
+        "app_client_id": "app_client_id",
+        "secret": "secret",
+        "secret_description": "bbc_forwarder",
+        "redirect_uri": "redirect_uri",
+        "main_resource": "main_resource",
+        "scopes": [
+            "basic",
+            "message_all_shared",
+            "mailbox_shared"
+        ]
+    },
+    "parser": {
+        "institutes": [
+            "TU/e",
+            "Technische Universiteit Eindhoven",
+            "Eindhoven University of Technology",
+            "Universiteit Maastricht",
+            "Maastricht University",
+            "Radboud Universiteit",
+            "rijksuniversiteit groningen",
+            "Universiteit van Tilburg",
+            "Tilburg University",
+            "TU Delft",
+            "Erasmus Universiteit Rotterdam",
+            "Universiteit Leiden",
+            "VU",
+            "Vrije Universiteit Amsterdam",
+            "WUR",
+            "Wageninigen Universiteit",
+            "Wageningen University",
+            "Universiteit van Amsterdam",
+            "Universiteit Twente",
+            "University of Twente",
+            "Hogeschool Utrecht",
+            "Hogeschool voor de Kunsten Utrecht",
+            "Saxion Hogescholen",
+            "Hogeschool Inholland",
+            "Fontys Hogescholen",
+            "Avans Hogeschool",
+            "Zuyd Hogeschool",
+            "Hogeschool Windesheim",
+            "Haagse Hogeschool",
+            "Hogeschool Leiden",
+            "Hogeschool Rotterdam",
+            "Hogeschool Tio"
+        ]
+    }
+}
