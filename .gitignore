@@ -1,7 +1,8 @@
-.ipynb_checkpoints
-.vscode
-__pycache__
-notebooks
-config.json
-o365_token.txt
-*.sync-conflict*
+/.git
+/.ipynb_checkpoints
+/.vscode
+/__pycache__
+/notebooks
+/config.json
+/o365_token.txt
+/*.sync-conflict*
