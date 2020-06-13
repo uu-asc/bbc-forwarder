@@ -1,5 +1,10 @@
 # bbc-forwarder
-auteur: l.c.vriend
+
+project   | details
+--------- | ------
+auteur(s) | l.c.vriend
+afdeling  | csa
+status    | dev.
 
 ## Use-case
 Tussen de instellingen is afgesproken dat de verklaring bewijs betaald collegegeld (bbc) onderling digitaal uitgewisseld mag worden. Een gevolg van deze afspraak is dat *alle* bbc's via een centraal e-mailadres binnen zullen komen -- ook de bbc's voor studenten met een decentrale inschrijving.
@@ -20,17 +25,17 @@ De bbc-forwarder heeft als doel om dit arbeidsintensieve proces te automatiseren
 ## To do
 
 ### Documentatie
-- []  algemene documentatie
+- [ ] algemene documentatie
 - [x] module documentatie
 - [x] code documentatie
-- []  flowcharts
+- [ ] flowcharts
 
 ### Kwaliteitseisen
 - [x] versiebeheer
 - [x] logging
-- []  sanity checks
+- [ ] sanity checks
 - [x] unit tests
-- []  ketentest
+- [ ] ketentest
 
 ## Proces flow
 ### Verwerking message
