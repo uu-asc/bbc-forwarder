@@ -4,6 +4,7 @@ project info | details
 ------------ | ------
 auteur(s)    | l.c.vriend
 afdeling     | csa
+release      | 0.1
 status       | dev.
 
 ## Instructie
@@ -103,11 +104,13 @@ Het systeem matcht studenten via een twee-ledige routine. Er kunnen hierbij twee
 2. Het systeem matcht de verkeerde student aan de e-mail.
 
 **Aanwezige student wordt niet gematcht**
+
 De kans op dit type fout is het grootst. Deze fout kan optreden indien de aanleverende instelling een fout heeft gemaakt in de spelling van de naam of in de geboortedatum. Daarnaast is het mogelijk dat bepaalde diakrieten in de naam het matchen bemoeilijken (indien dit een issue blijkt te zijn, kan hier aanvullende functionaliteit voor worden ontwikkeld).
 
 Het gevolg van deze fout is dat de bbc onterecht in de te verwerken map blijft. Dit betekent dat er alsnog periodiek een handmatige controle zal moeten plaatsvinden op de bbc's die langere tijd onverwerkt blijven. 
 
 **Verkeerde student wordt gematcht**
+
 De kans op dit type fout is zeer klein. Deze fout kan optreden in het geval dat de eigenlijke student niet gematcht wordt en er een andere student bestaat met dezelfde geboortedatum die een achternaam heeft die voorkomt in de pdf (c.q. de achternaam komt overeen met degene die de bbc ondertekend heeft).
 In het onwaarschijnlijke geval dat dit issue zich voordoet, geldt dat het doorsturen alleen intern naar vastgelegde uu-adressen gebeurt. In de e-mailtekst wordt de ontvangers gewezen op wat zij kunnen doen indien er iets niet klopt: CSa informeren. Omdat de student toestemming heeft gegeven aan de instellingen om de bbc te verwerken, bestaat er ook geen privacy risico.
 
@@ -132,8 +135,11 @@ In het onwaarschijnlijke geval dat dit issue zich voordoet, geldt dat het doorst
 
 ### Kwaliteitseisen
 - [x] configuratie
-- [x] versiebeheer
+- [x] killswitch
 - [x] logging
 - [x] sanity checks
 - [x] unit tests
+
+### Overige standaarden
+- [x] versiebeheer
 - [ ] ketentest
