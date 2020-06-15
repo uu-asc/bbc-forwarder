@@ -5,4 +5,5 @@ __pycache__
 notebooks
 config.json
 o365_token.txt
+logs/*.xlsx
 *.sync-conflict*
