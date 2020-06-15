@@ -12,6 +12,12 @@
         ]
     },
     "forwarder": {
+        "settings": {
+            "killswitch": false,
+            "draft_forward": true,
+            "draft_annotated": false,
+            "send_log_report": true
+        },
         "location": "folder/in/mailbox",
         "folders": {
             "to_process": "01_to_process",
