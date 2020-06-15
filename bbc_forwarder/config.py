@@ -11,7 +11,7 @@ from collections import namedtuple
 
 def to_namedtuple(dct, name):
     "Return dictionary as namedtuple."
-    NamedTuple = namedtuple(name.capitalize(), [key for key in dct])
+    NamedTuple = namedtuple(name.capitalize(), [key.lower() for key in dct])
     return NamedTuple(**dct)
 
 
