@@ -1,3 +1,24 @@
+"""forwarder module
+================
+
+The forwarder module contains several functions for annotating and forwarding
+messages. The main function is `process attachment` which contains the logic for
+deciding what to do with a message based on its attachment:
+
+1. If no or more than one record was associated with the attachment, then move
+it to the 'issues' folder.
+2. If the record refers to a central enrolment application, then create a
+message from the 'annotated' template and forward it to the csa.
+3. If the record refers to a decentral enrolment application, then create a
+message from the 'forward' template and forward it to the relevant faculty.
+
+The module further contains the following helper functions:
+
+create_report : create table with report for logs mail
+annotate : create tables with logging information
+create_forward : create forward from email
+"""
+
 from string import Template
 import pandas as pd
 
