@@ -1,9 +1,20 @@
 """mailbox module
 ==============
 
-The mailbox module contains the mailbox object which provides an api for
-accessing the microsoft office 365 mailbox. Use `config.json` to provide the
-necessary credentials. Make sure to register the app in Azure as well.
+The mailbox module creates the workspace for the bbc-forwarder. It contains
+several objects for manipulating the microsoft office 365 mailbox.
+
+`config.json` needs to be properly configured in order for the bbc-forwarder to
+work. It should contain:
+
+- the main resource (what mailbox to access)
+- the authentication credentials
+- the scopes
+- the redirect uri
+- the workspace location
+- the names of the workspace folders
+
+Make sure to register the app in Azure as well.
 
 More information
 ----------------
@@ -14,7 +25,7 @@ See the following links for more information on how authentication works:
 
 
 from O365 import Account
-from bbc_forwarder.config import CONFIG
+from bbc_forwarder.config import CONFIG, to_namedtuple
 
 
 credentials = (CONFIG.mailbox.app_client_id, CONFIG.mailbox.secret)
@@ -26,7 +37,7 @@ account = Account(
     credentials,
     main_resource=CONFIG.mailbox.main_resource,
     redirect_uri=CONFIG.mailbox.redirect_uri,
-    )
+)
 
 if not account.is_authenticated:
     if account.authenticate(scopes=CONFIG.mailbox.scopes):
@@ -34,3 +45,22 @@ if not account.is_authenticated:
 
 
 mailbox = account.mailbox()
+inbox = mailbox.inbox_folder()
+
+
+destination = CONFIG.forwarder.location.split('/')
+workspace = inbox
+for folder in destination:
+    workspace = workspace.get_folder(folder_name=folder)
+
+workspace_folders = workspace.get_folders()
+found_folders = {folder.name:folder.folder_id for folder in workspace_folders}
+expected_folders = CONFIG.forwarder.folders.values()
+if not all(folder in found_folders for folder in expected_folders):
+    raise EnvironmentError(
+        "\nSANITY CHECK FAILED :\n"
+        "One or more workspace folders were not in the expected location."
+    )
+
+folders = {k:found_folders[v] for k,v in CONFIG.forwarder.folders.items()}
+folder_ids = to_namedtuple(folders, name='folder_ids')

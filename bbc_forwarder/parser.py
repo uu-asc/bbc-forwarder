@@ -46,6 +46,7 @@ from pdfminer.high_level import extract_text
 
 from bbc_forwarder.config import CONFIG
 
+
 class ParseLogger(object):
     """ParseLogger
     ===========
@@ -67,9 +68,11 @@ class ParseLogger(object):
     ==========
     metadata : dict
         Dictionary for storing meta data of the current parsed/logged item.
+    logs : list
+        List for storing all logged messages.
     results : dict
         Dictionary for storing all parsed results, keys should be ids.
-    logs : pd.DataFrame
+    frame : pd.DataFrame
         Df containing all logged results.
 
     Methods
@@ -82,11 +85,11 @@ class ParseLogger(object):
     def __init__(self):
         self.metadata = {}
         self.results = {}
-        self._logs = []
+        self.logs = []
 
     def __call__(self, **kwargs):
         log = dict(timestamp=pd.Timestamp.now(), **self.metadata, **kwargs)
-        self._logs.append(log)
+        self.logs.append(log)
 
     def __setitem__(self, key, value):
         self.results[key] = value
@@ -95,8 +98,12 @@ class ParseLogger(object):
         return self.results[key]
 
     @property
-    def logs(self):
-        return pd.DataFrame(self._logs)
+    def frame(self):
+        return pd.DataFrame(self.logs)
+
+    @property
+    def fields(self):
+        return self.logs.columns
 
 
 def is_pdf(attachment):
@@ -142,7 +149,7 @@ def find_amounts(text):
 
 def find_institute(text):
     """Search text after removing newlines and redundant whitespace and return
-    any matched institutes (list of institutes is stored in `config.json`."""
+    any matched institutes (list of institutes is stored in 'config.json'."""
     found_institutes = []
     text = text.replace('\n', ' ')
     text = remove_whitespace(text)
@@ -218,10 +225,10 @@ def search_name(name, date, text, population):
         return pd.DataFrame()
 
 
-def parser(folder, population):
+def parser(folder, population, limit=None):
     "Parse mailbox folder and return results as ParseLogger object."
     logger = ParseLogger()
-    for message in folder.get_messages():
+    for message in folder.get_messages(limit=limit):
         logger.metadata = dict(
             received    = message.received.strftime("%Y-%m-%d %Hh%Mm%Ss"),
             object_id   = message.object_id,
@@ -234,52 +241,55 @@ def parser(folder, population):
             attachments = message.has_attachments,
         )
 
-        if message.has_attachments:
-            message.attachments.download_attachments()
-            for attachment in message.attachments:
-                log = dict()
-                log['attachment_id'] = attachment.attachment_id
-                log['attachment_name'] = attachment.name
-                log['pdf'] = is_pdf(attachment)
-                if not is_pdf(attachment):
-                    logger(**log)
-                    continue
+        if not message.has_attachments:
+            logger()
+            continue
 
-                text = parse_pdf(attachment)
-                log['parsed?'] = bool(text)
-                if not bool(text):
-                    logger(**log)
-                    continue
-                text = remove_whitespace(text)
-                logger[attachment.attachment_id] = text
+        message.attachments.download_attachments()
+        for attachment in message.attachments:
+            log = dict()
+            log['attachment_id'] = attachment.attachment_id
+            log['attachment_name'] = attachment.name
+            log['pdf'] = is_pdf(attachment)
+            if not is_pdf(attachment):
+                logger(**log)
+                continue
 
-                log['institutes'] = find_institute(text)
-                log['amounts'] = find_amounts(text)
+            text = parse_pdf(attachment)
+            log['parsed?'] = bool(text)
+            if not bool(text):
+                logger(**log)
+                continue
+            text = remove_whitespace(text)
+            logger[attachment.attachment_id] = text
 
-                text = replace_months(text)
-                dates = find_datestrings(text)
-                log['n_dates_found'] = len(dates)
-                if not dates:
-                    logger(**log)
-                    continue
+            log['institutes'] = find_institute(text)
+            log['amounts'] = find_amounts(text)
 
-                date = get_earliest(dates)
-                log['search_date'] = date
+            text = replace_months(text)
+            dates = find_datestrings(text)
+            log['n_dates_found'] = len(dates)
+            if not dates:
+                logger(**log)
+                continue
 
-                log['found_student'] = False
-                candidates = population.query("geboortedatum == @date")
-                log['candidates'] = ~candidates.empty
-                if candidates.empty:
-                    logger(**log)
-                    continue
+            date = get_earliest(dates)
+            log['search_date'] = date
 
-                for name in candidates.achternaam.unique():
-                    match = search_name(name, date, text, population)
-                    if not match.empty:
-                        log['found_student'] = True
-                        for record in match.iterrows():
-                            log.update(record[1].to_dict())
-                            logger(**log)
-                if not log['found_student']:
-                    logger(**log)
+            candidates = population.query("geboortedatum == @date")
+            log['candidates'] = ~candidates.empty
+            if candidates.empty:
+                logger(**log)
+                continue
+
+            log['found_student'] = False
+            for name in candidates.achternaam.unique():
+                match = search_name(name, date, text, population)
+                if not match.empty:
+                    log['found_student'] = True
+                    for record in match.iterrows():
+                        log.update(record[1].to_dict())
+                        logger(**log)
+            if not log['found_student']:
+                logger(**log)
     return logger
