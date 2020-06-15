@@ -128,6 +128,7 @@ In het onwaarschijnlijke geval dat dit issue zich voordoet, geldt dat het doorst
 
 ### Documentatie
 - [x] algemene documentatie
+- [x] projectstructuur
 - [x] module documentatie
 - [x] code documentatie
 - [x] flowcharts
