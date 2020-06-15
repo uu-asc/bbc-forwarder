@@ -11,6 +11,37 @@
             "mailbox_shared"
         ]
     },
+    "forwarder": {
+        "location": "folder/in/mailbox",
+        "folders": {
+            "to_process": "01_to_process",
+            "forward":    "02_forward",
+            "annotated":  "03_annotated",
+            "issues":     "04_issues",
+            "logs":       "98_logs",
+            "archived":   "99_archived"
+        },
+        "address": {
+            "uu":         "email@address.com",
+            "beta":       null,
+            "dgk":        null,
+            "geo":        null,
+            "gw":         null,
+            "gnk":        null,
+            "oc-umc":     null,
+            "rebo":       null,
+            "sw":         null,
+            "gst":        null,
+            "ucu":        null,
+            "ucr":        null
+        },
+        "subjects": {
+            "forward":    null,
+            "annotated":  null,
+            "issues":     null,
+            "logs":       null
+        }
+    },
     "parser": {
         "institutes": [
             "TU/e",
