@@ -24,6 +24,7 @@ import pandas as pd
 
 from bbc_forwarder.config import CONFIG
 from bbc_forwarder.templates import templates, subjects
+from bbc_forwarder.mailbox import mailbox, folder_ids
 
 
 def create_report(df):
@@ -76,7 +77,7 @@ def annotate(records):
     for key, values in fields.items():
         if isinstance(values, dict):
             records = records.rename(values, axis=1)
-            fields = fields.values()
+            values = values.values()
         substitutions[key] = records[values].astype(str).T.to_html(header=False)
     return substitutions
 
@@ -104,7 +105,7 @@ def process_attachment(attachment_id, logs):
     """
     select_attachment = logs.attachment_id == attachment_id
     not_cancelled = logs.inschrijvingstatus != 'G'
-    records = logs.loc[select_attachment & not_cancelled]
+    records = logs.loc[select_attachment & not_cancelled].copy()
     first_record = records.iloc[0]
     object_id = first_record.loc['object_id']
     msg = mailbox.get_message(object_id=object_id)
@@ -118,17 +119,23 @@ def process_attachment(attachment_id, logs):
 
         substitutions = annotate(records)
         if soort_inschrijving == 'S':
-            to = CONFIG.address['uu']
-            subject = subjects.annotated.substitute(substitutions)
+            to = CONFIG.forwarder.address['uu']
+            subject = subjects.annotated.substitute(studentnummer=studentnummer)
             content = templates.annotated.substitute(substitutions)
-            body = templates.base(content=content)
+            body = templates.base.substitute(content=content)
             fwd = create_forward(msg, to, subject, body)
-            fwd.move(folder_ids.annotated)
+            if CONFIG.forwarder.settings['draft_annotated']:
+                fwd.move(folder_ids.annotated)
+            else:
+                fwd.send()
         else:
-            to = CONFIG.address.get(faculteit)
-            subject = subjects.forward.substitute(substitutions)
+            to = CONFIG.forwarder.address.get(faculteit.lower())
+            subject = subjects.forward.substitute(studentnummer=studentnummer)
             content = templates.forward.substitute(substitutions)
-            body = templates.base(content=content)
+            body = templates.base.substitute(content=content)
             fwd = create_forward(msg, to, subject, body)
-            fwd.move(folder_ids.forward)
+            if CONFIG.forwarder.settings['draft_forward']:
+                fwd.move(folder_ids.forward)
+            else:
+                fwd.send()
         msg.move(folder_ids.archived)
