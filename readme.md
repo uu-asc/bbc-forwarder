@@ -127,15 +127,18 @@ In het onwaarschijnlijke geval dat dit issue zich voordoet, geldt dat het doorst
 ## To do
 
 ### Documentatie
-- [x] algemene documentatie
+- [x] use-case
+- [x] risico taxatie
 - [x] projectstructuur
-- [x] module documentatie
-- [x] code documentatie
-- [x] flowcharts
+- [x] algemene documentatie
+- [x] documentatie op module niveau
+- [x] documentatie op code niveau (functies, variabelen en objecten)
+- [x] flowcharts van de processtructuur
 - [ ] gebruikersinstructie
 
 ### Kwaliteitseisen
 - [x] configuratie
+- [x] modulaire opbouw
 - [x] killswitch
 - [x] logging
 - [x] sanity checks
