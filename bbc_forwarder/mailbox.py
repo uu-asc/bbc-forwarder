@@ -15,6 +15,7 @@ work. It should contain:
 - the names of the workspace folders
 
 Make sure to register the app in Azure as well.
+https://portal.azure.com/
 
 More information
 ----------------
@@ -47,11 +48,11 @@ if not account.is_authenticated:
 mailbox = account.mailbox()
 inbox = mailbox.inbox_folder()
 
-
-destination = CONFIG.forwarder.location.split('/')
 workspace = inbox
-for folder in destination:
-    workspace = workspace.get_folder(folder_name=folder)
+if CONFIG.forwarder.location is not None:
+    destination = CONFIG.forwarder.location.split('/')
+    for folder in destination:
+        workspace = workspace.get_folder(folder_name=folder)
 
 workspace_folders = workspace.get_folders()
 found_folders = {folder.name:folder.folder_id for folder in workspace_folders}
