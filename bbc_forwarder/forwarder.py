@@ -30,18 +30,23 @@ from bbc_forwarder.mailbox import mailbox, folder_ids
 def create_report(df):
     "Create a html-table containing a log report."
     s = pd.Series(dtype=int)
-    s.loc['aantal_mails']       = df.object_id.nunique()
-    s.loc['unieke_attachments'] = df.attachment_id.nunique()
+    if df.empty:
+        return 'Geen enkele e-mail verwerkt.'
+    s.loc['aantal_mails'] = df.object_id.nunique()
 
-    attachments = df.groupby("attachment_id")
-    s.loc['attachment_is_pdf'] = attachments.pdf.any().sum()
-    s.loc['parser_succesvol']  = attachments['parsed?'].any().sum()
-    s.loc['student_gevonden']  = attachments.found_student.any().sum()
+    if 'attachment_id' in df.columns:
+        s.loc['unieke_attachments'] = df.attachment_id.nunique()
+        attachments = df.groupby("attachment_id")
+        s.loc['attachment_is_pdf'] = attachments.pdf.any().sum()
+        s.loc['parser_succesvol'] = attachments['parsed?'].any().sum()
 
-    central = df.query("soort_inschrijving == 'S'").groupby("attachment_id")
-    decentral = df.query("soort_inschrijving != 'S'").groupby("attachment_id")
-    s.loc['vti_centraal']   = central.studentnummer.any().sum()
-    s.loc['vti_decentraal'] = decentral.studentnummer.any().sum()
+        if 'found_student' in df.columns:
+            s.loc['student_gevonden'] = attachments.found_student.any().sum()
+            query = "soort_inschrijving == 'S'"
+            central = df.query(query).groupby("attachment_id")
+            s.loc['vti_centraal'] = central.studentnummer.any().sum()
+            decentral = df.query(f"not {query}").groupby("attachment_id")
+            s.loc['vti_decentraal'] = decentral.studentnummer.any().sum()
     return s.to_frame().to_html(header=None)
 
 
