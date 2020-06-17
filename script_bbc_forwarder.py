@@ -69,24 +69,25 @@ if __name__ == '__main__' and not CONFIG.forwarder.settings['killswitch']:
     ### exclude messages that have more than one pdf
     ### exclude attachment if no student was found
 
-    no_pdf = find_no_pdf(parsed.frame)
-    too_many_pdf = find_too_many_pdf(parsed.frame)
-    query = "found_student == True and object_id not in @too_many_pdf"
-    df = parsed.frame.query(query)
+    if 'found_student' in parsed.frame.columns:
+        no_pdf = find_no_pdf(parsed.frame)
+        too_many_pdf = find_too_many_pdf(parsed.frame)
+        query = "found_student == True and object_id not in @too_many_pdf"
+        df = parsed.frame.query(query)
 
-    df.amounts = df.amounts.apply(', '.join)
-    df.institutes = df.institutes.apply(', '.join)
+        df.amounts = df.amounts.apply(', '.join)
+        df.institutes = df.institutes.apply(', '.join)
 
-    for attachment_id in df.attachment_id.unique():
-        # this will move messages to issues
-        # when no records or too many records were found
-        process_attachment(attachment_id, df)
+        for attachment_id in df.attachment_id.unique():
+            # this will move messages to issues
+            # when no records or too many records were found
+            process_attachment(attachment_id, df)
 
 
-    # move messages with no or more than one pdf to issues folder
-    other_issues = no_pdf + too_many_pdf
-    df = parsed.frame.query("object_id in @other_issues")
-    for object_id in df.object_id.unique():
-        msg = mailbox.get_message(object_id=object_id)
-        msg.mark_as_unread()
-        msg.move(folder_ids.issues)
+        # move messages with no or more than one pdf to issues folder
+        other_issues = no_pdf + too_many_pdf
+        df = parsed.frame.query("object_id in @other_issues")
+        for object_id in df.object_id.unique():
+            msg = mailbox.get_message(object_id=object_id)
+            msg.mark_as_unread()
+            msg.move(folder_ids.issues)
