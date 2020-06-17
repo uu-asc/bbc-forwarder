@@ -92,6 +92,16 @@ def create_forward(msg, recipient, subject, body):
     return fwd
 
 
+def get_address(keys):
+    """Loop through `keys` and return the first address where the key matches a
+    key in `CONFIG.forwarder.address`. Return None if no match was found."""
+    address = CONFIG.forwarder.address
+    items = (item.lower() for item in keys)
+    generator = (item for item in items if item in address)
+    key = next(generator, None)
+    return address.get(key)
+
+
 def process_attachment(attachment_id, logs):
     """Process `attachment_id` from `logs` with the following steps:
 
@@ -114,8 +124,14 @@ def process_attachment(attachment_id, logs):
         msg.move(folder_ids.issues)
     else:
         studentnummer      = first_record.loc['studentnummer']
-        faculteit          = first_record.loc['faculteit']
         soort_inschrijving = first_record.loc['soort_inschrijving']
+
+        keys = dict(
+            opleiding   = first_record.loc['opleiding'],
+            aggregaat_2 = first_record.loc['aggregaat_2'],
+            aggregaat_1 = first_record.loc['aggregaat_1'],
+            faculteit   = first_record.loc['faculteit'],
+        )
 
         substitutions = annotate(records)
         if soort_inschrijving == 'S':
@@ -124,17 +140,19 @@ def process_attachment(attachment_id, logs):
             content = templates.annotated.substitute(substitutions)
             body = templates.base.substitute(content=content)
             fwd = create_forward(msg, to, subject, body)
-            if CONFIG.forwarder.settings['draft_annotated']:
+            draft = CONFIG.forwarder.settings['draft_annotated']
+            if draft:
                 fwd.move(folder_ids.annotated)
             else:
                 fwd.send()
         else:
-            to = CONFIG.forwarder.address.get(faculteit.lower())
+            to = get_address(keys.values())
             subject = subjects.forward.substitute(studentnummer=studentnummer)
             content = templates.forward.substitute(substitutions)
             body = templates.base.substitute(content=content)
             fwd = create_forward(msg, to, subject, body)
-            if CONFIG.forwarder.settings['draft_forward']:
+            draft = CONFIG.forwarder.settings['draft_forward']
+            if draft or to is None:
                 fwd.move(folder_ids.forward)
             else:
                 fwd.send()
