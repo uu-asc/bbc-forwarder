@@ -9,7 +9,7 @@ tempaltes are loaded from `CONFIG` (these are stored in 'config.json').
 from pathlib import Path
 from string import Template
 
-from bbc_forwarder.config import to_namedtuple, CONFIG
+from bbc_forwarder.config import to_namedtuple, CONFIG, PATH
 
 
 def read(path):
@@ -20,7 +20,7 @@ def name(path):
     return Path(path).suffixes[0].strip('.').strip('_')
 
 
-glob = Path('templates').glob('*.html')
+glob = Path(PATH / 'templates').glob('*.html')
 templates = to_namedtuple(
     {name(path):Template(read(path)) for path in glob},
     name='Templates',

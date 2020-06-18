@@ -7,7 +7,9 @@ a nested namedtuple containing the project settings.
 
 import json
 from collections import namedtuple
+from pathlib import Path
 
+PATH = Path(__file__).resolve().parent.parent
 
 def to_namedtuple(dct, name):
     "Return dictionary as namedtuple."
@@ -25,4 +27,4 @@ def config_from_json(path):
     )
 
 
-CONFIG = config_from_json("config.json")
+CONFIG = config_from_json(PATH / "config.json")

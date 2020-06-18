@@ -17,15 +17,19 @@ attachment.
 If killswitch is set to True in config, the script will not run.
 """
 
+import os
 import sys
 sys.path.insert(0, '../osiris_query')
 from datetime import date
-from bbc_forwarder.config import CONFIG
+from bbc_forwarder.config import CONFIG, PATH
 from bbc_forwarder.parser import parser
 from bbc_forwarder.mailbox import mailbox, workspace, folder_ids
 from bbc_forwarder.templates import templates, subjects
 from bbc_forwarder.population import population
 from bbc_forwarder.forwarder import create_report, process_attachment
+
+
+os.chdir(PATH)
 
 
 def find_too_many_pdf(df):
@@ -54,13 +58,13 @@ if __name__ == '__main__' and not CONFIG.forwarder.settings['killswitch']:
     subject = subjects.logs.substitute(date=today, nrecords=len(parsed.frame))
     content = templates.logs.substitute(date=today, report=report)
     filename = f"logs/{today}.logs.bbc_forwarder.xlsx"
-    parsed.frame.to_excel(filename)
+    parsed.frame.to_excel(PATH / filename)
 
     msg = workspace.get_folder(folder_id=folder_ids.logs).new_message()
     msg.subject = subject
     msg.body = templates.base.substitute(content=content)
     msg.attachments.add(filename)
-    msg.to.add("csa.asc@uu.nl")
+    msg.to.add(CONFIG.forwarder.address['uu'])
     msg.send()
 
 
