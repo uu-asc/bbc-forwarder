@@ -40,7 +40,7 @@ def create_report(df):
         s.loc['attachment_is_pdf'] = attachments.pdf.any().sum()
         s.loc['parser_succesvol'] = attachments['parsed?'].any().sum()
 
-        if 'found_student' in df.columns:
+        if 'found_student' in df.columns and df.found_student.any():
             s.loc['student_gevonden'] = attachments.found_student.any().sum()
             query = "soort_inschrijving == 'S'"
             central = df.query(query).groupby("attachment_id")
