@@ -23,7 +23,7 @@ from string import Template
 import pandas as pd
 
 from bbc_forwarder.config import CONFIG
-from bbc_forwarder.templates import templates, subjects
+from bbc_forwarder.templates import templates, subjects, filename
 from bbc_forwarder.mailbox import mailbox, folder_ids
 
 
@@ -145,6 +145,18 @@ def process_attachment(attachment_id, logs):
             content = templates.annotated.substitute(substitutions)
             body = templates.base.substitute(content=content)
             fwd = create_forward(msg, to, subject, body)
+
+            # rename attachment
+            fwd.attachments.download_attachments()
+            for attachment in fwd.attachments:
+                if attachment.name.lower().endswith('.pdf'):
+                    content = io.BytesIO(base64.b64decode(attachment.content))
+                    break
+            fwd.attachments.remove(attachment)
+            new_filename = filename.substitute(studentnummer=studentnummer)
+            fwd.attachments.add([(content, new_filename)])
+            fwd.save_draft()
+
             draft = CONFIG.forwarder.settings['draft_annotated']
             if draft:
                 fwd.move(folder_ids.annotated)

@@ -46,7 +46,8 @@
             "annotated":  null,
             "issues":     null,
             "logs":       null
-        }
+        },
+        "filename": "20_$studentnummer.pdf"
     },
     "parser": {
         "institutes": [

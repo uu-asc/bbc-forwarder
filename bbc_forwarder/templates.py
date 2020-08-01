@@ -30,3 +30,5 @@ subjects = to_namedtuple(
     {k:Template(v) for k,v in CONFIG.forwarder.subjects.items()},
     name='Subjects',
 )
+
+filename = Template(CONFIG.forwarder.filename)
