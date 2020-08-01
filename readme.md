@@ -4,7 +4,7 @@ project info | details
 ------------ | ------
 auteur(s)    | l.c.vriend
 afdeling     | csa
-release      | 0.1
+release      | 0.2
 status       | dev.
 
 ## Instructie
@@ -44,7 +44,7 @@ De bbc-forwarder heeft als doel om dit arbeidsintensieve proces te automatiseren
 ### Datasets
 - Inschrijfhistorie centrale/decentrale inschrijfregels uit OSIRIS
 - Lijst met facultaire e-mailadressen
-- Lijst met bbc e-mailadressen van andere instellingen 
+- Lijst met bbc e-mailadressen van andere instellingen
 
 ## Project structuur
 
@@ -107,7 +107,7 @@ Het systeem matcht studenten via een twee-ledige routine. Er kunnen hierbij twee
 
 De kans op dit type fout is het grootst. Deze fout kan optreden indien de aanleverende instelling een fout heeft gemaakt in de spelling van de naam of in de geboortedatum. Daarnaast is het mogelijk dat bepaalde diakrieten in de naam het matchen bemoeilijken (indien dit een issue blijkt te zijn, kan hier aanvullende functionaliteit voor worden ontwikkeld).
 
-Het gevolg van deze fout is dat de bbc onterecht in de te verwerken map blijft. Dit betekent dat er alsnog periodiek een handmatige controle zal moeten plaatsvinden op de bbc's die langere tijd onverwerkt blijven. 
+Het gevolg van deze fout is dat de bbc onterecht in de te verwerken map blijft. Dit betekent dat er alsnog periodiek een handmatige controle zal moeten plaatsvinden op de bbc's die langere tijd onverwerkt blijven.
 
 **Verkeerde student wordt gematcht**
 
