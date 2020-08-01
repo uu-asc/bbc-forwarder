@@ -83,7 +83,9 @@ def annotate(records):
         if isinstance(values, dict):
             records = records.rename(values, axis=1)
             values = values.values()
-        substitutions[key] = records[values].astype(str).T.to_html(header=False)
+        substitutions[key] = (
+            records[values].fillna('-').astype(str).T.to_html(header=False)
+        )
     return substitutions
 
 
