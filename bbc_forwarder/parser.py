@@ -162,18 +162,18 @@ def find_institute(text):
 def replace_months(text):
     "Replace month names with month number in string."
     replacements = {
-        '(januari|jan)':   '01',
-        '(februari|feb)':  '02',
-        '(maart|mrt)':     '03',
-        '(april|apr)':     '04',
-        '(mei)':           '05',
-        '(juni|jun)':      '06',
-        '(juli|jul)':      '07',
-        '(augustus|aug)':  '08',
-        '(september|sep)': '09',
-        '(oktober|okt)':   '10',
-        '(november|nov)':  '11',
-        '(december|dec)':  '12',
+        '(?<=[\b-\\\\])(januari|jan)':   '01',
+        '(?<=[\b-\\\\])(februari|feb)':  '02',
+        '(?<=[\b-\\\\])(maart|mrt)':     '03',
+        '(?<=[\b-\\\\])(april|apr)':     '04',
+        '(?<=[\b-\\\\])(mei)':           '05',
+        '(?<=[\b-\\\\])(juni|jun)':      '06',
+        '(?<=[\b-\\\\])(juli|jul)':      '07',
+        '(?<=[\b-\\\\])(augustus|aug)':  '08',
+        '(?<=[\b-\\\\])(september|sep)': '09',
+        '(?<=[\b-\\\\])(oktober|okt)':   '10',
+        '(?<=[\b-\\\\])(november|nov)':  '11',
+        '(?<=[\b-\\\\])(december|dec)':  '12',
     }
     for pat, repl in replacements.items():
         text = re.sub(pat, repl, text, count=0, flags=0)
@@ -209,17 +209,22 @@ def get_earliest(datestrings):
         order = ['day', 'month', 'year']
         zipped = zip(order, re.split(regex, datestring))
         dateparts = {unit:int(part) for unit, part in zipped}
-        return pd.Timestamp(**dateparts)
-    return min([to_timestamp(datestring) for datestring in datestrings])
+        try:
+            return pd.Timestamp(**dateparts)
+        except ValueError:
+            return None
+    timestamps = [to_timestamp(i) for i in datestrings]
+    return min([i for i in timestamps if i is not None])
 
 
-def search_name(name, date, text, population):
+def search_name(name, text, population):
     """Search text for name. If match is found, return all records from
-    population database as DatFrame. Return empty DataFrame if no match.
+    population database as DataFrame. Return empty DataFrame if no match.
     """
-    match = re.findall(name, text)
+    regex = re.compile(f"\b{name}\b")
+    match = regex.findall(text)
     if match:
-        query = "achternaam == @name and geboortedatum == @date"
+        query = "achternaam == @name"
         return population.query(query)
     else:
         return pd.DataFrame()
@@ -229,6 +234,7 @@ def parser(folder, population, limit=None):
     "Parse mailbox folder and return results as ParseLogger object."
     logger = ParseLogger()
     for message in folder.get_messages(limit=limit):
+        print(message.sender, '---', message.subject)
         logger.metadata = dict(
             received    = message.received.strftime("%Y-%m-%d %Hh%Mm%Ss"),
             object_id   = message.object_id,
@@ -247,6 +253,7 @@ def parser(folder, population, limit=None):
 
         message.attachments.download_attachments()
         for attachment in message.attachments:
+            print(f" - {attachment.name}")
             log = dict()
             log['attachment_id'] = attachment.attachment_id
             log['attachment_name'] = attachment.name
@@ -284,7 +291,7 @@ def parser(folder, population, limit=None):
 
             log['found_student'] = False
             for name in candidates.achternaam.unique():
-                match = search_name(name, date, text, population)
+                match = search_name(name, text, candidates)
                 if not match.empty:
                     log['found_student'] = True
                     for record in match.iterrows():
