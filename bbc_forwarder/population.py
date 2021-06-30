@@ -12,11 +12,11 @@ More information
 
 import flatbread
 
-from query.results import QueryResult
+from query.result import QueryResult
 
 
 population = QueryResult.read_pickle(
-    "bbc/inschrijfhistorie_2020"
+    "bbc/inschrijfhistorie_2021"
 ).frame.replace(
     {'faculteit': {'IVLOS': 'GST', 'RA': 'UCR', 'UC': 'UCU'}}
 ).pipe(

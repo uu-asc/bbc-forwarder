@@ -29,9 +29,6 @@ from bbc_forwarder.population import population
 from bbc_forwarder.forwarder import create_report, process_attachment
 
 
-os.chdir(PATH)
-
-
 def find_too_many_pdf(df):
     "Return list containing object_id's with more than one pdf attached."
     messages_with_pdf = df.query('pdf==True').groupby('object_id')
@@ -76,7 +73,7 @@ if __name__ == '__main__' and not CONFIG.forwarder.settings['killswitch']:
     if 'found_student' in parsed.frame.columns:
         no_pdf = find_no_pdf(parsed.frame)
         too_many_pdf = find_too_many_pdf(parsed.frame)
-        query = "found_student == True and object_id not in @too_many_pdf"
+        query = "found_student and object_id not in @too_many_pdf"
         df = parsed.frame.query(query)
 
         df.amounts = df.amounts.apply(', '.join)

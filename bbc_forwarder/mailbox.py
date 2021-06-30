@@ -37,7 +37,7 @@ main_resource = CONFIG.mailbox.main_resource
 account = Account(
     credentials,
     main_resource=CONFIG.mailbox.main_resource,
-    redirect_uri=CONFIG.mailbox.redirect_uri,
+    # redirect_uri=CONFIG.mailbox.redirect_uri,
 )
 
 if not account.is_authenticated:

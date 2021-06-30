@@ -1,2 +1,4 @@
-call get_env.bat
-call conda update -f
+call _get_env.bat
+call conda activate %env%
+call conda env update --file environment.yml
+timeout /t 90

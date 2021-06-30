@@ -19,11 +19,14 @@ annotate : create tables with logging information
 create_forward : create forward from email
 """
 
+import base64
+import io
 from string import Template
+from flatbread.core.axes.columns import select
 import pandas as pd
 
 from bbc_forwarder.config import CONFIG
-from bbc_forwarder.templates import templates, subjects
+from bbc_forwarder.templates import templates, subjects, filename
 from bbc_forwarder.mailbox import mailbox, folder_ids
 
 
@@ -83,7 +86,9 @@ def annotate(records):
         if isinstance(values, dict):
             records = records.rename(values, axis=1)
             values = values.values()
-        substitutions[key] = records[values].astype(str).T.to_html(header=False)
+        substitutions[key] = (
+            records[values].fillna('-').astype(str).T.to_html(header=False)
+        )
     return substitutions
 
 
@@ -121,9 +126,15 @@ def process_attachment(attachment_id, logs):
     select_attachment = logs.attachment_id == attachment_id
     not_cancelled = logs.inschrijvingstatus != 'G'
     records = logs.loc[select_attachment & not_cancelled].copy()
-    first_record = records.iloc[0]
-    object_id = first_record.loc['object_id']
-    msg = mailbox.get_message(object_id=object_id)
+
+    if records.empty:
+        first_record = logs.loc[select_attachment].iloc[0].copy()
+        object_id = first_record.loc['object_id']
+        msg = mailbox.get_message(object_id=object_id)
+    else:
+        first_record = records.iloc[0]
+        object_id = first_record.loc['object_id']
+        msg = mailbox.get_message(object_id=object_id)
 
     if len(records) != 1:
         msg.move(folder_ids.issues)
@@ -145,6 +156,18 @@ def process_attachment(attachment_id, logs):
             content = templates.annotated.substitute(substitutions)
             body = templates.base.substitute(content=content)
             fwd = create_forward(msg, to, subject, body)
+
+            # rename attachment
+            fwd.attachments.download_attachments()
+            for attachment in fwd.attachments:
+                if attachment.name.lower().endswith('.pdf'):
+                    content = io.BytesIO(base64.b64decode(attachment.content))
+                    break
+            fwd.attachments.remove(attachment)
+            new_filename = filename.substitute(studentnummer=studentnummer)
+            fwd.attachments.add([(content, new_filename)])
+            fwd.save_draft()
+
             draft = CONFIG.forwarder.settings['draft_annotated']
             if draft:
                 fwd.move(folder_ids.annotated)
