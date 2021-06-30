@@ -17,7 +17,6 @@ attachment.
 If killswitch is set to True in config, the script will not run.
 """
 
-import os
 import sys
 sys.path.insert(0, '../osiris_query')
 from datetime import date
