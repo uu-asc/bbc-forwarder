@@ -117,7 +117,11 @@ def parse_pdf(attachment):
     """
     try:
         doc = base64.b64decode(attachment.content)
-        return extract_text(io.BytesIO(doc))
+        text = extract_text(io.BytesIO(doc))
+        # return False if parsed text is (mostly) empty
+        if len(text) < 24:
+            return False
+        return text
     except:
         return False
 
@@ -221,7 +225,7 @@ def search_name(name, text, population):
     """Search text for name. If match is found, return all records from
     population database as DataFrame. Return empty DataFrame if no match.
     """
-    regex = re.compile(f"\b{name}\b")
+    regex = re.compile(rf"\b{name}\b")
     match = regex.findall(text)
     if match:
         query = "achternaam == @name"

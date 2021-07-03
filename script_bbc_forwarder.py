@@ -41,6 +41,11 @@ def find_no_pdf(df):
     return no_pdf[no_pdf].index.to_list()
 
 
+def find_pdf_not_parsed(df):
+    "Return list containing object_id's with no pdf attached."
+    pdf_not_parse = ~df.groupby('object_id')['parsed?'].any()
+    return pdf_not_parse[pdf_not_parse].index.to_list()
+
 if __name__ == '__main__' and not CONFIG.forwarder.settings['killswitch']:
     # create logs
     to_process = workspace.get_folder(folder_id=folder_ids.to_process)
@@ -72,6 +77,8 @@ if __name__ == '__main__' and not CONFIG.forwarder.settings['killswitch']:
     if 'found_student' in parsed.frame.columns:
         no_pdf = find_no_pdf(parsed.frame)
         too_many_pdf = find_too_many_pdf(parsed.frame)
+        pdf_not_parsed = find_pdf_not_parsed(parsed.frame)
+
         query = "found_student and object_id not in @too_many_pdf"
         df = parsed.frame.query(query)
 
@@ -85,7 +92,7 @@ if __name__ == '__main__' and not CONFIG.forwarder.settings['killswitch']:
 
 
         # move messages with no or more than one pdf to issues folder
-        other_issues = no_pdf + too_many_pdf
+        other_issues = no_pdf + too_many_pdf + pdf_not_parsed
         df = parsed.frame.query("object_id in @other_issues")
         for object_id in df.object_id.unique():
             msg = mailbox.get_message(object_id=object_id)
