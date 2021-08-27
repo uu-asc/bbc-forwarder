@@ -106,7 +106,7 @@ def get_address(keys):
     """Loop through `keys` and return the first address where the key matches a
     key in `CONFIG.forwarder.address`. Return None if no match was found."""
     address = CONFIG.forwarder.address
-    items = (item.lower() for item in keys if item is not None)
+    items = (str(item).lower() for item in keys if item is not None)
     generator = (item for item in items if item in address)
     key = next(generator, None)
     return address.get(key)
