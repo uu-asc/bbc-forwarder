@@ -166,21 +166,21 @@ def find_institute(text):
 def replace_months(text):
     "Replace month names with month number in string."
     replacements = {
-        '(?<=[\b-\\\\])(januari|jan)':   '01',
-        '(?<=[\b-\\\\])(februari|feb)':  '02',
-        '(?<=[\b-\\\\])(maart|mrt)':     '03',
-        '(?<=[\b-\\\\])(april|apr)':     '04',
-        '(?<=[\b-\\\\])(mei)':           '05',
-        '(?<=[\b-\\\\])(juni|jun)':      '06',
-        '(?<=[\b-\\\\])(juli|jul)':      '07',
-        '(?<=[\b-\\\\])(augustus|aug)':  '08',
-        '(?<=[\b-\\\\])(september|sep)': '09',
-        '(?<=[\b-\\\\])(oktober|okt)':   '10',
-        '(?<=[\b-\\\\])(november|nov)':  '11',
-        '(?<=[\b-\\\\])(december|dec)':  '12',
+        '(?<=[\b-\\\\])(januari|jan)':     '01',
+        '(?<=[\b-\\\\])(februari|feb)':    '02',
+        '(?<=[\b-\\\\])(maart|mrt|mar)':   '03',
+        '(?<=[\b-\\\\])(april|apr)':       '04',
+        '(?<=[\b-\\\\])(mei|may)':         '05',
+        '(?<=[\b-\\\\])(juni|jun)':        '06',
+        '(?<=[\b-\\\\])(juli|jul)':        '07',
+        '(?<=[\b-\\\\])(augustus|aug)':    '08',
+        '(?<=[\b-\\\\])(september|sep)':   '09',
+        '(?<=[\b-\\\\])(oktober|okt|oct)': '10',
+        '(?<=[\b-\\\\])(november|nov)':    '11',
+        '(?<=[\b-\\\\])(december|dec)':    '12',
     }
     for pat, repl in replacements.items():
-        text = re.sub(pat, repl, text, count=0, flags=0)
+        text = re.sub(pat, repl, text, count=0, flags=re.I)
     return text
 
 
