@@ -15,10 +15,8 @@ The parser module contains the `parser` function which does the following:
     g. If a name is match, store the population record.
 4. Logs this process.
 
-The module further contains several helper functions and a `ParseLogger` class
-which the `parser` utilizes during parsing:
+The module further contains several helper functions which the `parser` utilizes during parsing:
 
-- ParseLogger :
 - is_pdf :
 - parse_pdf :
 - remove_whitespace :
@@ -44,69 +42,48 @@ from pathlib import Path
 import pandas as pd
 from pdfminer.high_level import extract_text
 
+from query import osiris as osi
 from bbc_forwarder.config import CONFIG
 
 
-class ParseLogger(object):
-    """ParseLogger
-    ===========
-
-    Class for logging and storing parser results.
-
-    ### Metadata
-    Set `metadata` to the meta data you wish to store with the logs/results.
-
-    ### Storing results
-    Store results through simple subscription:
-        `logger[id] = value`
-
-    ### Logging results
-    `__call__` instance to create a log at timestamp.now(). The current meta
-    data plus any kwargs provided to the call will be added to the log.
-
-    Attributes
-    ==========
-    metadata : dict
-        Dictionary for storing meta data of the current parsed/logged item.
-    logs : list
-        List for storing all logged messages.
-    results : dict
-        Dictionary for storing all parsed results, keys should be ids.
-    frame : pd.DataFrame
-        Df containing all logged results.
-
-    Methods
-    =======
-    __call__ : log metadata and **kwargs
-    __setitem__ : store parsed result at `key`.
-    __getitem__ : retrieve parsed result at `key`.
-    """
-
-    def __init__(self):
-        self.metadata = {}
-        self.results = {}
-        self.logs = []
-
-    def __call__(self, **kwargs):
-        log = dict(timestamp=pd.Timestamp.now(), **self.metadata, **kwargs)
-        self.logs.append(log)
-
-    def __setitem__(self, key, value):
-        self.results[key] = value
-
-    def __getitem__(self, key):
-        return self.results[key]
-
-    @property
-    def frame(self):
-        return pd.DataFrame(self.logs)
-
-    @property
-    def fields(self):
-        return self.logs.columns
+SQL = """
+select
+    studentnummer,
+    stud.voorletters,
+    stud.voorvoegsels,
+    stud.achternaam,
+    stud.geboortedatum,
+    sinh.sinh_id,
+    sinh.soort_inschrijving_fac soort_inschrijving,
+    sinh.croho,
+    opleiding,
+    case ropl.faculteit
+        when 'IVLOS' then 'GST'
+        when 'RA' then 'UCR'
+        when 'UC' then 'UCU'
+        else ropl.faculteit
+    end faculteit,
+    ropl.aggregaat_1,
+    ropl.aggregaat_2,
+    sinh.actiefcode_opleiding_csa actiefcode,
+    sinh.mutatiedatum_actiefcode datum_actiefcode,
+    sinh.inschrijvingstatus,
+    sinh.datum_verzoek_inschr datum_verzoek,
+    sinh.intrekking_vooraanmelding datum_intrekking,
+    sinh.ingangsdatum,
+    sinh.afloopdatum,
+    sinh.examentype_csa examentype
+from
+    osiris.ost_student_inschrijfhist sinh
+    join osiris.ost_student stud using (studentnummer)
+    left join osiris.ost_opleiding ropl using (opleiding)
+where
+    sinh.collegejaar = {{ collegejaar }}
+    and stud.geboortedatum = date '{{ geboortedatum }}'
+"""
 
 
-def is_pdf(attachment):
+def is_pdf(attachment) -> bool:
     "Return if attachment has extension '.pdf' as boolean."
     return Path(attachment.name).suffix.lower() == '.pdf'
 
@@ -126,13 +103,13 @@ def parse_pdf(attachment):
         return False
 
 
-def remove_whitespace(text):
+def remove_whitespace(text) -> str:
     "Remove any redundant whitespace (but not newlines)."
     regex = r"[^\S\n\r]{2,}"
     return re.sub(regex, ' ', text)
 
 
-def find_amounts(text):
+def find_amounts(text) -> list[str]:
     "Search text and return any strings matching amount format: € #,####.##"
     regex = re.compile(
         r"""
@@ -151,19 +128,19 @@ def find_amounts(text):
     return re.findall(regex, text)
 
 
-def find_institute(text):
+def find_institute(text) -> list:
     """Search text after removing newlines and redundant whitespace and return
     any matched institutes (list of institutes is stored in 'config.json'."""
     found_institutes = []
     text = text.replace('\n', ' ')
     text = remove_whitespace(text)
-    for institute in CONFIG.parser.institutes:
+    for institute in CONFIG['parser']['institutes']:
         if re.search(institute, text):
             found_institutes.append(institute)
     return found_institutes
 
 
-def replace_months(text):
+def replace_months(text) -> str:
     "Replace month names with month number in string."
     replacements = {
         '(?<=[\b-\\\\])(januari|jan)':     '01',
@@ -184,7 +161,7 @@ def replace_months(text):
     return text
 
 
-def find_datestrings(text):
+def find_datestrings(text) -> list[str]:
     "Search text and return any strings matching date format: dd-mm-yyyy."
     regex = re.compile(
         r"""
@@ -206,9 +183,9 @@ def find_datestrings(text):
     return re.findall(regex, text)
 
 
-def get_earliest(datestrings):
+def get_earliest(datestrings) -> pd.Timestamp:
     "Convert datestrings into timestamps and return earliest date."
-    def to_timestamp(datestring):
+    def to_timestamp(datestring) -> pd.Timestamp | None:
         regex = r'(?:[-/\.]|[^\S\n\r])'
         order = ['day', 'month', 'year']
         zipped = zip(order, re.split(regex, datestring))
@@ -221,8 +198,9 @@ def get_earliest(datestrings):
     return min([i for i in timestamps if i is not None])
 
 
-def search_name(name, text, population):
-    """Search text for name. If match is found, return all records from
+def search_name(name: str, text: str, population: pd.DataFrame) -> pd.DataFrame:
+    """
+    Search text for name. If match is found, return all records from
     population database as DataFrame. Return empty DataFrame if no match.
     """
     regex = re.compile(rf"\b{name}\b")
@@ -234,73 +212,94 @@ def search_name(name, text, population):
         return pd.DataFrame()
 
 
-def parser(folder, population, limit=None):
-    "Parse mailbox folder and return results as ParseLogger object."
-    logger = ParseLogger()
-    for message in folder.get_messages(limit=limit):
-        print(message.sender, '---', message.subject)
-        logger.metadata = dict(
-            received    = message.received.strftime("%Y-%m-%d %Hh%Mm%Ss"),
-            object_id   = message.object_id,
-            folder_id   = message.folder_id,
-            folder_name = folder.name,
-            sender      = str(message.sender),
-            flag        = message.flag,
-            is_read     = message.is_read,
-            subject     = message.subject,
-            attachments = message.has_attachments,
-        )
+def get_kandidaten(geboortedatum: pd.Timestamp) -> pd.DataFrame:
+    result = osi.execute_query(
+        SQL,
+        collegejaar = CONFIG['parser']['collegejaar'],
+        geboortedatum = f"{geboortedatum:%Y-%m-%d}"
+    )
+    return result
 
-        if not message.has_attachments:
-            logger()
-            continue
 
-        message.attachments.download_attachments()
-        for attachment in message.attachments:
-            print(f" - {attachment.name}")
-            log = dict()
-            log['attachment_id'] = attachment.attachment_id
-            log['attachment_name'] = attachment.name
-            log['pdf'] = is_pdf(attachment)
-            if not is_pdf(attachment):
-                logger(**log)
-                continue
+def parse_attachment(attachment) -> dict:
+    records = []
+    record = {}
+    record['attachment_id'] = attachment.attachment_id
+    record['attachment_name'] = attachment.name
+    record['is_pdf'] = is_pdf(attachment)
+    if not is_pdf(attachment):
+        records.append(record)
+        return records
+    text = parse_pdf(attachment)
+    record['is_parsed'] = bool(text)
+    if not bool(text):
+        records.append(record)
+        return records
 
-            text = parse_pdf(attachment)
-            log['parsed?'] = bool(text)
-            if not bool(text):
-                logger(**log)
-                continue
-            text = remove_whitespace(text)
-            logger[attachment.attachment_id] = text
+    text = remove_whitespace(text)
 
-            log['institutes'] = find_institute(text)
-            log['amounts'] = find_amounts(text)
+    record['instelling'] = frozenset(find_institute(text))
+    record['bedrag'] = frozenset(find_amounts(text))
 
-            text = replace_months(text)
-            dates = find_datestrings(text)
-            log['n_dates_found'] = len(dates)
-            if not dates:
-                logger(**log)
-                continue
+    text = replace_months(text)
+    dates = find_datestrings(text)
+    record['n_dates_found'] = len(dates)
+    if not dates:
+        records.append(record)
+        return records
 
-            date = get_earliest(dates)
-            log['search_date'] = date
+    date = get_earliest(dates)
+    record['search_date'] = date
 
-            candidates = population.query("geboortedatum == @date")
-            log['candidates'] = ~candidates.empty
-            if candidates.empty:
-                logger(**log)
-                continue
+    candidates = get_kandidaten(record['search_date'])
+    record['has_candidates'] = not candidates.empty
+    if candidates.empty:
+        records.append(record)
+        return records
 
-            log['found_student'] = False
-            for name in candidates.achternaam.unique():
-                match = search_name(name, text, candidates)
-                if not match.empty:
-                    log['found_student'] = True
-                    for record in match.iterrows():
-                        log.update(record[1].to_dict())
-                        logger(**log)
-            if not log['found_student']:
-                logger(**log)
-    return logger
+    record['found_student'] = False
+    for name in candidates.achternaam.unique():
+        student_data = search_name(name, text, candidates)
+        if not student_data.empty:
+            record['found_student'] = True
+            record['n_sinh'] = len(student_data)
+            for _, row in student_data.iterrows():
+                new_record = record | row.to_dict()
+                records.append(new_record)
+    if not record['found_student']:
+        records.append(record)
+    return records
+
+
+def parse_message(message) -> list:
+    records = list()
+    record = dict(
+        datum_ontvangst = message.received.strftime("%Y-%m-%d %Hh%Mm%Ss"),
+        object_id       = message.object_id,
+        folder_id       = message.folder_id,
+        zender          = str(message.sender),
+        flag            = message.flag,
+        is_read         = message.is_read,
+        onderwerp       = message.subject,
+        has_attachments = message.has_attachments,
+    )
+    if not message.has_attachments:
+        records.append(record)
+        return records
+    
+    message.attachments.download_attachments()
+    for attachment in message.attachments:
+        parsed_attachment_data = parse_attachment(attachment)
+        for parsed_attachment in parsed_attachment_data:
+            new_record = record | parsed_attachment
+            records.append(new_record)
+    return records
+
+
+def parse_all_messages(messages) -> pd.DataFrame:
+    results = []
+    for message in messages:
+        result = parse_message(message)
+        results.extend(result)
+    df = pd.DataFrame(results)
+    return df

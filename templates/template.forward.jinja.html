@@ -1,0 +1,20 @@
+{% extends 'template._base_.jinja.html' %}
+{% block content %}
+<p>
+    Wij hebben het bijgevoegde <strong>bewijs betaald collegegeld</strong> ontvangen. Op basis van onderstaande gegevens uit onze administratie gaan wij ervanuit dat dit document voor jullie bedoeld is.
+</p>
+<h3>MAIL</h3>
+{{ mail_data.to_html(header=False, na_rep='-') }}
+
+<h3>BBC</h3>
+{{ bbc_data.to_html(header=False, na_rep='-') }}
+
+<h3>Student</h3>
+{{ student_data.to_html(header=False, na_rep='-') }}
+
+<h3>Inschrijfregel</h3>
+{{ inschrijfregel_data.to_html(header=False, na_rep='-') }}
+<p>
+    <strong>Nota bene:</strong> dit is een <a href="https://github.com/uu-asc/bbc-forwarder">geautomatiseerd</a> bericht. Is dit bbc niet voor jullie bedoeld of zijn er andere issues? Neem dan contact met ons op via <a href="mailto:csa.asc@uu.nl">csa.asc@uu.nl</a>.
+</p>
+{% endblock content %}

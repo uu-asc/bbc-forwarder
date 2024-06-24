@@ -1,13 +1,13 @@
 """templates module
 ================
 
-The templates module loads all templates in the 'templates' folder and stores
-them as namedtuple in `templates`. Similarly the subject lines belonging to the
-tempaltes are loaded from `CONFIG` (these are stored in 'config.json').
+The templates module loads a Jinja `Environment` in a global variable. Similarly the subject lines and filenames belonging to the templates are loaded in a global dictionary (`SUBJECTS` and `FILENAME`) from `CONFIG` (these are stored in 'config.json').
 """
 
 from pathlib import Path
 from string import Template
+
+from jinja2 import Environment, FileSystemLoader
 
 from bbc_forwarder.config import to_namedtuple, CONFIG, PATH
 
@@ -20,15 +20,12 @@ def name(path):
     return Path(path).suffixes[0].strip('.').strip('_')
 
 
-glob = Path(PATH / 'templates').glob('*.html')
-templates = to_namedtuple(
-    {name(path):Template(read(path)) for path in glob},
-    name='Templates',
+ENV = Environment(
+    loader = FileSystemLoader(searchpath = PATH / 'templates'),
+    trim_blocks = True,
+    lstrip_blocks = True
 )
 
-subjects = to_namedtuple(
-    {k:Template(v) for k,v in CONFIG.forwarder.subjects.items()},
-    name='Subjects',
-)
+SUBJECTS = {k:Template(v) for k,v in CONFIG['forwarder']['subjects'].items()}
 
-filename = Template(CONFIG.forwarder.filename)
+FILENAME = Template(CONFIG['forwarder']['filename'])

@@ -2,97 +2,87 @@
 ================
 
 The forwarder module contains several functions for annotating and forwarding
-messages. The main function is `process attachment` which contains the logic for
-deciding what to do with a message based on its attachment:
-
-1. If no or more than one record was associated with the attachment, then move
-it to the 'issues' folder.
-2. If the record refers to a central enrolment application, then create a
-message from the 'annotated' template and forward it to the csa.
-3. If the record refers to a decentral enrolment application, then create a
-message from the 'forward' template and forward it to the relevant faculty.
+messages. The main function is `process_message` which contains the logic for
+deciding what to do with a message based on the associated logging data.
 
 The module further contains the following helper functions:
 
-create_report : create table with report for logs mail
-annotate : create tables with logging information
+get_stats : create table with report for logs mail
+get_message_data : create tables with logging information
 create_forward : create forward from email
 """
 
 import base64
 import io
-from string import Template
-from flatbread.core.axes.columns import select
+
 import pandas as pd
+from O365.message import Message
 
 from bbc_forwarder.config import CONFIG
-from bbc_forwarder.templates import templates, subjects, filename
-from bbc_forwarder.mailbox import mailbox, folder_ids
+from bbc_forwarder.templates import ENV, SUBJECTS, FILENAME
+from bbc_forwarder.mailbox import MAILBOX, FOLDER_IDS
 
 
-def create_report(df):
-    "Create a html-table containing a log report."
-    s = pd.Series(dtype=int)
-    if df.empty:
-        return 'Geen enkele e-mail verwerkt.'
-    s.loc['aantal_mails'] = df.object_id.nunique()
+def get_message_data(df: pd.DataFrame) -> dict[str, pd.DataFrame|str]:
+    record = df.iloc[0]
+    mail = [
+        'datum_ontvangst',
+        'zender',
+        'onderwerp',
+    ]
+    bbc = [
+        'instelling',
+        'bedrag',
+    ]
+    student = [
+        'studentnummer',
+        'voorletters',
+        'voorvoegsels',
+        'achternaam',
+        'geboortedatum',
+    ]
+    inschrijfregel = [
+        'soort_inschrijving',
+        'opleiding',
+        'faculteit',
+        'inschrijvingstatus',
+        'datum_verzoek',
+        'datum_intrekking',
+        'ingangsdatum',
+        'afloopdatum',
+        'examentype',
+    ]
+    return {
+        # strings
+        'msg_id':              record['object_id'],
+        'status':              record['status'],
+        'soort':               record['soort'],
+        'onderwerp':           record['onderwerp'],
+        'ontvanger':           record['ontvanger'],
+        'opleiding':           record['opleiding'],
+        'studentnummer':       ';'.join(df.studentnummer.dropna().unique()),
 
-    if 'attachment_id' in df.columns:
-        s.loc['unieke_attachments'] = df.attachment_id.nunique()
-        attachments = df.groupby("attachment_id")
-        s.loc['attachment_is_pdf'] = attachments.pdf.any().sum()
-        s.loc['parser_succesvol'] = attachments['parsed?'].any().sum()
-
-        if 'found_student' in df.columns and df.found_student.any():
-            s.loc['student_gevonden'] = attachments.found_student.any().sum()
-            query = "soort_inschrijving == 'S'"
-            central = df.query(query).groupby("attachment_id")
-            s.loc['vti_centraal'] = central.studentnummer.any().sum()
-            decentral = df.query(f"not {query}").groupby("attachment_id")
-            s.loc['vti_decentraal'] = decentral.studentnummer.any().sum()
-    return s.to_frame().to_html(header=None, na_rep='-')
+        # tables
+        'mail_data':           df[mail].drop_duplicates().T,
+        'bbc_data':            df[bbc].drop_duplicates().T,
+        'student_data':        df[student].drop_duplicates().T,
+        'inschrijfregel_data': df[inschrijfregel].T,
+    }
 
 
-def annotate(records):
-    "Create a dictionary of html-tables containing annotation data."
-    fields = dict(
-        bbc = {
-            'received':   'datum_ontvangst',
-            'sender':     'zender',
-            'subject':    'onderwerp',
-            'institutes': 'instelling',
-            'amounts':    'bedrag',
-        },
-        student = [
-            'studentnummer',
-            'voorletters',
-            'voorvoegsels',
-            'achternaam',
-            'geboortedatum',
-        ],
-        vti = [
-            'soort_inschrijving',
-            'opleiding',
-            'faculteit',
-            'inschrijvingstatus',
-            'datum_vti',
-            'ingangsdatum',
-            'afloopdatum',
-            'examentype',
-        ],
+def get_stats(results, field) -> pd.Series:
+    stats = (
+        results
+        .groupby('object_id')[field]
+        .agg(lambda grp: grp.iloc[0])
+        .value_counts()
+        .rename('aantal')
     )
-    substitutions = {}
-    for key, values in fields.items():
-        if isinstance(values, dict):
-            records = records.rename(values, axis=1)
-            values = values.values()
-        substitutions[key] = (
-            records[values].fillna('-').astype(str).T.to_html(header=False)
-        )
-    return substitutions
+    stats['Totaal'] = stats.sum()
+    return stats
 
 
-def create_forward(msg, recipient, subject, body):
+def create_forward(msg, recipient, subject, body) -> Message:
     "Create a forward from `msg` with `subject`, `body` and `recipient`."
     fwd = msg.forward()
     fwd.body = body
@@ -102,86 +92,64 @@ def create_forward(msg, recipient, subject, body):
     return fwd
 
 
-def get_address(keys):
-    """Loop through `keys` and return the first address where the key matches a
-    key in `CONFIG.forwarder.address`. Return None if no match was found."""
-    address = CONFIG.forwarder.address
-    items = (str(item).lower() for item in keys if item is not None)
-    generator = (item for item in items if item in address)
-    key = next(generator, None)
-    return address.get(key)
+def process_message(
+    message_id: str,
+    template_path: str,
+    results: pd.DataFrame,
+    test_run: bool = False,
+) -> None:
+    message = MAILBOX.get_message(object_id=message_id)
 
+    query = f"object_id == '{message_id}'"
+    logs = results.query(query)
+    data = get_message_data(logs)
 
-def process_attachment(attachment_id, logs):
-    """Process `attachment_id` from `logs` with the following steps:
+    soort         = data['soort']
+    status        = data['status']
+    studentnummer = data['studentnummer']
+    opleiding     = data['opleiding']
+    onderwerp     = data['onderwerp']
+    ontvanger     = data['ontvanger']
 
-    1. selecting records from `logs` pertaining to `attachment_id`.
-    2. removing cancelled enrolments from those records.
-    3. checking how many records are left.
-    4. if the number of records is not 1, move it to issues.
-    5. else: annotate the record
-    6. forward it to faculty or send it to own mailbox.
-    7. archive message.
-    """
-    select_attachment = logs.attachment_id == attachment_id
-    not_cancelled = logs.inschrijvingstatus != 'G'
-    records = logs.loc[select_attachment & not_cancelled].copy()
+    template = ENV.get_template(template_path)
+    body = template.render(**data)
 
-    if records.empty:
-        first_record = logs.loc[select_attachment].iloc[0].copy()
-        object_id = first_record.loc['object_id']
-        msg = mailbox.get_message(object_id=object_id)
+    subject = SUBJECTS[soort].substitute(
+        status        = status,
+        onderwerp     = onderwerp,
+        studentnummer = studentnummer,
+        opleiding     = opleiding,
+    )
+
+    if test_run:
+        ontvanger = ontvanger if ontvanger else 'geen_ontvanger'
+        print(f"{soort:.<12}{ontvanger:.<20}{subject}")
+        return None
+
+    forward = create_forward(
+        message,
+        recipient = ontvanger,
+        subject = subject,
+        body = body,
+    )
+
+    if soort in ['csa', 'faculteit']:
+        # rename pdf attachment and reattach it
+        # remove all other attachments
+        forward.attachments.download_attachments()
+        for attachment in forward.attachments:
+            if attachment.name.lower().endswith('.pdf'):
+                content = base64.b64decode(attachment.content)
+                new_attachment = io.BytesIO(content)
+            forward.attachments.remove(attachment)
+        new_name = FILENAME.substitute(studentnummer=studentnummer)
+        forward.attachments.add([(new_attachment, new_name)])
+        forward.save_draft()
+
+    save_as_draft = CONFIG['forwarder']['settings']['save_as_draft'][soort]
+    if save_as_draft or not ontvanger:
+        forward.move(FOLDER_IDS[soort])
     else:
-        first_record = records.iloc[0]
-        object_id = first_record.loc['object_id']
-        msg = mailbox.get_message(object_id=object_id)
-
-    if len(records) != 1:
-        msg.move(folder_ids.issues)
-    else:
-        studentnummer      = first_record.loc['studentnummer']
-        soort_inschrijving = first_record.loc['soort_inschrijving']
-
-        keys = dict(
-            opleiding   = first_record.loc['opleiding'],
-            aggregaat_2 = first_record.loc['aggregaat_2'],
-            aggregaat_1 = first_record.loc['aggregaat_1'],
-            faculteit   = first_record.loc['faculteit'],
-        )
-
-        substitutions = annotate(records)
-        if soort_inschrijving == 'S':
-            to = CONFIG.forwarder.address['uu']
-            subject = subjects.annotated.substitute(studentnummer=studentnummer)
-            content = templates.annotated.substitute(substitutions)
-            body = templates.base.substitute(content=content)
-            fwd = create_forward(msg, to, subject, body)
-
-            # rename attachment
-            fwd.attachments.download_attachments()
-            for attachment in fwd.attachments:
-                if attachment.name.lower().endswith('.pdf'):
-                    content = io.BytesIO(base64.b64decode(attachment.content))
-                    break
-            fwd.attachments.remove(attachment)
-            new_filename = filename.substitute(studentnummer=studentnummer)
-            fwd.attachments.add([(content, new_filename)])
-            fwd.save_draft()
-
-            draft = CONFIG.forwarder.settings['draft_annotated']
-            if draft:
-                fwd.move(folder_ids.annotated)
-            else:
-                fwd.send()
-        else:
-            to = get_address(keys.values())
-            subject = subjects.forward.substitute(studentnummer=studentnummer)
-            content = templates.forward.substitute(substitutions)
-            body = templates.base.substitute(content=content)
-            fwd = create_forward(msg, to, subject, body)
-            draft = CONFIG.forwarder.settings['draft_forward']
-            if draft or to is None:
-                fwd.move(folder_ids.forward)
-            else:
-                fwd.send()
-        msg.move(folder_ids.archived)
+        forward.send()
+    message.move(FOLDER_IDS['archived'])
+    return None

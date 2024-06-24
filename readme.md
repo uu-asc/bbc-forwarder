@@ -4,7 +4,7 @@ project info | details
 ------------ | ------
 auteur(s)    | l.c.vriend
 afdeling     | csa
-release      | 0.2
+release      | 0.3
 status       | dev.
 
 ## Instructie
@@ -16,16 +16,17 @@ Tussen de instellingen is afgesproken dat de verklaring bewijs betaald collegege
 
 De verwachting is dat er in de loop van de inschrijfcampagne honderden voor de faculteit bestemde bbc's zullen binnenkomen. Het doorzetten van deze bbc's vergt uitzoekwerk. Bovendien komt het voor dat bbc's niet direct gekoppeld kunnen worden aan een inschrijving. In dat geval moet periodiek gecontroleerd worden of de bbc inmiddels verwerkt kan worden.
 
-De bbc-forwarder heeft als doel om dit arbeidsintensieve proces te automatiseren. Daarbij gaat de robot op hoofdlijnen als volgt te werk:
+De bbc-forwarder heeft als doel om dit arbeidsintensieve proces te automatiseren. Daarbij gaat het script op hoofdlijnen als volgt te werk:
 
 1. Lees de mailbox uit waar de bbc's binnenkomen.
 2. Kijk per message in de mailbox of er een of meerdere pdf-attachments aanwezig zijn en parse deze.
 3. Zoek binnen de geparste pdf's naar geboortedata en gebruik deze om in de studentendatabase een serie kandidaten voor te selecteren.
 4. Zoek vervolgens binnen de pdf naar de aanwezigheid van de achternaam van de gevonden kandidaten.
-5. Indien het mogelijk is om een bbc aan een student te koppelen, controleer dan of het een student betreft met een centrale of decentrale inschrijving:
+5. Indien het mogelijk is om een bbc aan één student te koppelen, controleer dan of het een student betreft met een centrale of decentrale inschrijving:
 
     * Bij een decentrale inschrijving: stel een e-mail op met aanvullende informatie (studentnummer, bedrag, etc.) aan de betreffende faculteit en forward de pdf.
     * Bij een centrale inschrijving: stel dan een e-mail op met aanvullende informatie (studentnummer, bedrag, etc.) en verwerkingsinstructie en verplaats deze vervolgens naar de map met te verwerken bbc's.
+6. Indien het niet mogelijk is om een bbc te koppelen, stel dan een e-mail op waarin omschreven staat waarom het niet gelukt is (bv. er is geen pdf aanwezig, de pdf kon niet gelezen worden, er kon geen student gevonden worden, er zijn meerdere studenten gevonden, etc.) en verplaats deze vervolgens naar de map met issues.
 
 ## Afhankelijkheden
 
@@ -37,9 +38,10 @@ De bbc-forwarder heeft als doel om dit arbeidsintensieve proces te automatiseren
 - [O365](https://github.com/O365/python-o365) - Microsoft Graph and Office 365 API made easy
 - [Pdfminer.six](https://pdfminersix.readthedocs.io/en/latest/) - python package for extracting information from PDF documents
 - [pandas](pandas.pydata.org/) - fast, powerful, flexible and easy to use open source data analysis and manipulation tool
+- [jinja](https://jinja.palletsprojects.com/en/3.0.x/) - fast, expressive, extensible templating engine
 
 ### Eigen libraries
-- [OSIRIS-query](https://github.com/uu-csa/osiris_query) - Platform voor queries uit OSIRIS
+- OSIRIS-query-2 - Platform voor queries uit OSIRIS
 
 ### Datasets
 - Inschrijfhistorie centrale/decentrale inschrijfregels uit OSIRIS
@@ -51,43 +53,33 @@ De bbc-forwarder heeft als doel om dit arbeidsintensieve proces te automatiseren
 ```
 bbc_forwarder
 |
-|__/bbc_forwarder (code)
-|   |_ config.py     : inladen configuratie bestand
-|   |_ forwarder.py  : logica voor annoteren/forwarden e-mails
-|   |_ mailbox.py    : toegang tot mailbox en mappenstructuur
-|   |_ parser.py     : parser voor pdf's in e-mails en logging
-|   |_ population.py : inladen en prepareren populatie database
-|   |_ templates.py  : inladen e-mail templates en subject lines
-|
-|__/logs (opslagplaats voor log-bestanden)
-|
-|__/static (opslaagplaats voor flowcharts)
-|
-|__/templates (opslagplaats voor e-mail templates)
-|   |_ template._base_.html    : basis layout
-|   |_ template.annotated.html : eigen annotaties
-|   |_ template.forward.html   : forwards aan faculteit
-|   |_ template.issues.html    : issues
-|   |_ template.logs.html      : logs
-|
-|__/tests (code : unittests)
-|
-|___config.example.json : voorbeeld configuratie bestand
-|   ('config.json' inrichten voor productie)
-|
-|___environment.yml : systeem afhankelijkheden
-|
-|___flowchart_parser.drawio : [drawio](https://app.diagrams.net/) bron flowcharts
-|
-|___readme.md : deze toelichting
-|
-|___script_bbc_forwarder.py : script om de routine uit te voeren
+├── bbc_forwarder (code)
+│   ├── config.py       : configuratie
+│   ├── forwarder.py    : logica voor opstellen/forwarden e-mails
+│   ├── mailbox.py      : toegang tot mailbox en mappenstructuur
+│   ├── parser.py       : parser voor e-mails
+│   └── templates.py    : laden van templates (body en subject)
+├── logs (opslagplaats voor log-bestanden)
+├── static (opslaagplaats voor flowcharts)
+├── templates (opslagplaats voor e-mail templates)
+│   ├── template._base_.jinja.html    : basis layout
+│   ├── template.annotated.jinja.html : sjabloon voor csa
+│   ├── template.forward.jinja.html   : sjabloon voor faculteit
+│   ├── template.issues.jinja.html    : sjabloon voor issues
+│   └── template.logs.jinja.html      : sjabloon voor logs
+├── tests (code : unittests)
+├── config.example.json : voorbeeld configuratie bestand
+|   (config.json inrichten voor productie)
+├── environment.yml : systeem afhankelijkheden
+├── flowchart_parser.drawio [drawio](https://app.diagrams.net/) bron flowcharts
+├── script_bbc_forwarder.py : script
+└── readme.md : deze toelichting
+
 ```
 
 ## Sanity checks
 De volgende sanity checks zijn in het systeem ingebouwd:
 
-- [ ] Inschrijfhistorie ouder dan vandaag > foutmelding
 - [x] Mappenstructuur binnen de verwerkingsmap gewijzigd > foutmelding
 - [x] E-mail bevat meer dan één pdf > naar handmatige afhandeling
 - [x] Geen enkele record gekoppeld aan document > naar handmatige afhandeling

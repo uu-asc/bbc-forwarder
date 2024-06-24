@@ -1,0 +1,13 @@
+{% extends 'template._base_.jinja.html' %}
+{% block content %}
+<p>In de bijlage vinden jullie alle gelogde records voor de run van de <code>bbc-forwarder</code> op {{ today }}.</p>
+<h3>Overzicht</h3>
+{% if n_records == 0 %}
+<p>Geen e-mails verwerkt!</p>
+{% else %}
+{{ per_soort.to_frame().to_html() }}
+
+<h3>Issues</h3>
+{{ issues.to_frame().to_html() }}
+{% endif %}
+{% endblock content %}

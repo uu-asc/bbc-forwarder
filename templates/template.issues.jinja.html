@@ -1,0 +1,21 @@
+{% extends 'template._base_.jinja.html' %}
+{% block content %}
+<p>
+    Deze geforwarde e-mail kon niet verwerkt worden omdat: <code>{{ status }}</code>.
+</p>
+<h3>MAIL</h3>
+{{ mail_data.to_html(header=False, na_rep='-') }}
+
+{% if not status in ['no_pdfs', 'pdf_not_parsed', 'too_many_pdfs',] %}
+<h3>BBC</h3>
+{{ bbc_data.to_html(header=False, na_rep='-') }}
+{% endif %}
+
+{% if status in ['more_than_one_matched_student', 'more_than_one_sinh_id'] %}
+<h3>Student</h3>
+{{ student_data.to_html(header=False, na_rep='-') }}
+
+<h3>Inschrijfregel</h3>
+{{ inschrijfregel_data.to_html(header=False, na_rep='-') }}
+{% endif %}
+{% endblock content %}
