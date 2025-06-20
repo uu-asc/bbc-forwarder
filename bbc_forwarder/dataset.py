@@ -77,11 +77,10 @@ def get_ontvanger(grp) -> str|None:
     soort = grp.soort.iloc[0]
     if soort in ['csa', 'issue']:
         return CONFIG['forwarder']['address']['csa']
-    
+
     fields = ['opleiding', 'aggregaat_2', 'aggregaat_1', 'faculteit']
 
-    values = grp.query("opleiding != ''").iloc[0].loc[fields].dropna().to_list()
-    search_terms = [i for i in values]
+    search_terms = grp.query("opleiding.notna()").iloc[0].loc[fields].dropna().to_list()
     address = get_address(search_terms)
     return address
 
