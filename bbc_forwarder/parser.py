@@ -286,7 +286,7 @@ def parse_message(message) -> list:
     if not message.has_attachments:
         records.append(record)
         return records
-    
+
     message.attachments.download_attachments()
     for attachment in message.attachments:
         parsed_attachment_data = parse_attachment(attachment)
