@@ -216,7 +216,8 @@ def get_kandidaten(geboortedatum: pd.Timestamp) -> pd.DataFrame:
     result = osi.execute_query(
         SQL,
         collegejaar = CONFIG['parser']['collegejaar'],
-        geboortedatum = f"{geboortedatum:%Y-%m-%d}"
+        geboortedatum = f"{geboortedatum:%Y-%m-%d}",
+        squeeze = False,
     )
     return result
 
